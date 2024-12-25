@@ -3,7 +3,11 @@ Hotel management system
 
 ## Features
 - guest-interface
-- Reception-interface
+- Receptionist-interface
+- Room-availability
+- check ins and checkouts
+- Get user's data
+- Display Rooms
 
 
 ## Usage
