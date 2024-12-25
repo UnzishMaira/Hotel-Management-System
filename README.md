@@ -13,7 +13,6 @@ Hotel management system
 ## Usage
 click on the Cpp code to use the ***Hotel Management System***
 
-## License
-[MIT](LICENSE)
+
 
 
