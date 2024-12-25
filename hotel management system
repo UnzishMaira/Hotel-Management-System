@@ -1,0 +1,343 @@
+#include <iostream>
+#include <string>
+#include <cctype>
+#include <regex>
+
+using namespace std;
+
+const int MAX_ROOMS = 20; 
+const int MAX_GUESTS = 50;
+
+// Room data arrays
+int room_ids[MAX_ROOMS];
+string room_types[MAX_ROOMS];
+double room_prices[MAX_ROOMS];
+bool room_availabilities[MAX_ROOMS];
+
+// Guest data arrays
+string guest_cnic[MAX_GUESTS];
+string guest_names[MAX_GUESTS];
+string guest_addresses[MAX_GUESTS];
+string guest_phones[MAX_GUESTS];
+string guest_login_ids[MAX_GUESTS]; 
+int guest_count = 0;
+
+// Room booking tracking
+int guest_room_bookings[MAX_GUESTS];  // -1 means no room booked
+
+
+bool isAlphabetic(const string& str) {
+    for (char c : str) {
+        if (!isalpha(c) && c != ' ') {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool isNumeric(const string& str) {
+    for (char c : str) {
+        if (!isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Valid CNIC
+bool isValidCNIC(const string& cnic) {
+    regex cnic_regex("\\d{5}-\\d{7}-\\d{1}");
+    return regex_match(cnic, cnic_regex);
+}
+
+// Valid phone number (11-digits)
+bool isValidPhoneNumber(const string& phone) {
+    return phone.length() == 11 && isNumeric(phone);
+}
+
+// Unique login ID
+string generateLoginID(int guest_id) {
+    return "GUEST" + to_string(guest_id);
+}
+
+// Check if the CNIC is already taken
+bool isCNICUnique(const string& cnic) {
+    for (int i = 0; i < guest_count; ++i) {
+        if (guest_cnic[i] == cnic) {
+            return false;  // CNIC already exists
+        }
+    }
+    return true;  // CNIC is unique
+}
+
+// Check if phone number or CNIC is already taken
+bool isPhoneOrCNICUnique(const string& phone, const string& cnic) {
+    for (int i = 0; i < guest_count; ++i) {
+        if (guest_phones[i] == phone || guest_cnic[i] == cnic) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Initialize room data
+void initializeRooms() {
+    for (int i = 0; i < MAX_ROOMS; ++i) {
+        room_ids[i] = i + 1;
+        room_types[i] = (i < 10) ? "Single" : "Double";  
+        room_prices[i] = (i < 10) ? 10000.0 : 15000.0;   
+        room_availabilities[i] = true;
+    }
+}
+
+// Display room info
+void displayRooms() {
+    cout << "\nRoom ID\tType\tPrice\tAvailable\n";
+    for (int i = 0; i < MAX_ROOMS; ++i) {
+        cout << room_ids[i] << "\t" << room_types[i] << "\t" << room_prices[i] << "\t"
+            << (room_availabilities[i] ? "Available" : "Booked") << "\n";
+    }
+}
+
+// Add a new guest
+void addGuest() {
+    if (guest_count >= MAX_GUESTS) {
+        cout << "Maximum guest limit reached.\n";
+        return;
+    }
+
+    string guest_cnic_str;
+    string guest_phone;
+
+    // Ask for a unique CNIC
+    cout << "Enter guest CNIC (in format 12345-1234567-1): ";
+    cin >> guest_cnic_str;
+    while (!isValidCNIC(guest_cnic_str) || !isCNICUnique(guest_cnic_str)) {
+        cout << "Error: CNIC format is invalid or CNIC already exists. Please re-enter CNIC (in format 12345-1234567-1): ";
+        cin >> guest_cnic_str;
+    }
+
+    guest_cnic[guest_count] = guest_cnic_str;
+
+    string guest_name;
+    cout << "Enter guest name: ";
+    cin.ignore(); 
+    getline(cin, guest_name);  
+    while (!isAlphabetic(guest_name)) {
+        cout << "Error: Guest name must contain only letters and spaces. Please re-enter guest name: ";
+        getline(cin, guest_name);
+    }
+    guest_names[guest_count] = guest_name;
+
+    cout << "Enter guest address: ";
+    getline(cin, guest_addresses[guest_count]);
+
+    // Ask for phone number and validate it (must be 11 digits)
+    cout << "Enter guest phone (11 digits): ";
+    cin >> guest_phone;
+    while (!isValidPhoneNumber(guest_phone) || !isPhoneOrCNICUnique(guest_phone, "")) {
+        cout << "Error: Phone number must be 11 digits and unique. Please re-enter guest phone: ";
+        cin >> guest_phone;
+    }
+    guest_phones[guest_count] = guest_phone;
+
+    // Generate a unique login ID for the guest
+    guest_login_ids[guest_count] = generateLoginID(guest_count + 1);
+
+    // Initialize room booking as -1 (no room booked)
+    guest_room_bookings[guest_count] = -1;
+
+    ++guest_count;
+    cout << "Guest added successfully. Login ID for the guest: " << guest_login_ids[guest_count - 1] << endl;
+}
+
+// Book a room 
+void bookRoom() {
+    if (guest_count == 0) {
+        cout << "Error: No guests in the system. Please add a guest first.\n";
+        return;
+    }
+
+    string guest_cnic_str;
+    cout << "Enter guest CNIC: ";
+    cin >> guest_cnic_str;
+
+    // Check if guest exists
+    int guest_index = -1;
+    for (int i = 0; i < guest_count; ++i) {
+        if (guest_cnic[i] == guest_cnic_str) {
+            guest_index = i;
+            break;
+        }
+    }
+    if (guest_index == -1) {
+        cout << "Error: Guest does not exist.\n";
+        return;
+    }
+
+    int room_id;
+    cout << "Enter room ID to book (1-based index): ";
+    cin >> room_id;
+    if (room_id <= 0 || room_id > MAX_ROOMS || !room_availabilities[room_id - 1]) {
+        cout << "Error: Room isn't available or invalid room ID.\n";
+        return;
+    }
+
+    // Mark the room as booked for the guest
+    room_availabilities[room_id - 1] = false;
+    guest_room_bookings[guest_index] = room_id;
+
+    cout << "Room " << room_id << " booked successfully for guest CNIC: " << guest_cnic_str << ".\n";
+}
+
+// Receptionist - Check-in a guest
+void checkInGuest() {
+    string guest_cnic_str;
+    cout << "Enter guest CNIC to check in: ";
+    cin >> guest_cnic_str;
+
+    // Find the guest by CNIC
+    int guest_index = -1;
+    for (int i = 0; i < guest_count; ++i) {
+        if (guest_cnic[i] == guest_cnic_str) {
+            guest_index = i;
+            break;
+        }
+    }
+    if (guest_index == -1 || guest_room_bookings[guest_index] == -1) {
+        cout << "Error: Guest has not booked any room.\n";
+        return;
+    }
+
+    int room_id = guest_room_bookings[guest_index];
+    room_availabilities[room_id - 1] = false;
+    cout << "Guest checked in successfully to room " << room_id << ".\n";
+}
+
+// Receptionist - Check-out a guest
+void checkOutGuest() {
+    string guest_cnic_str;
+    cout << "Enter guest CNIC to check out: ";
+    cin >> guest_cnic_str;
+
+    // Find the guest by CNIC
+    int guest_index = -1;
+    for (int i = 0; i < guest_count; ++i) {
+        if (guest_cnic[i] == guest_cnic_str) {
+            guest_index = i;
+            break;
+        }
+    }
+    if (guest_index == -1 || guest_room_bookings[guest_index] == -1) {
+        cout << "Error: Guest has not checked in or booked a room.\n";
+        return;
+    }
+
+    int room_id = guest_room_bookings[guest_index];
+    room_availabilities[room_id - 1] = true;
+    guest_room_bookings[guest_index] = -1;
+    cout << "Guest checked out successfully from room " << room_id << ".\n";
+}
+
+// Display the main menu (Guest)
+void displayGuestMenu() {
+    cout << "\n1. View Available Rooms\n";
+    cout << "2. View My Booking\n";
+    cout << "3. Exit to Main Menu\n";
+    cout << "Enter your choice: ";
+}
+
+// Display the initial login menu
+void displayLoginMenu() {
+    cout << "\n1. Receptionist Login\n";
+    cout << "2. Guest Login\n";
+    cout << "3. Exit\n";
+    cout << "Enter your choice: ";
+}
+
+int main() {
+    cout << "Welcome to the Hotel Management System\n";
+    initializeRooms();
+
+    int roleChoice;
+    do {
+        displayLoginMenu();
+        cin >> roleChoice;
+
+        if (roleChoice == 1) {
+            // Receptionist Login
+            string password;
+            cout << "Enter Receptionist Password: ";
+            cin >> password;
+
+            if (password == "hotelreceptionist") {
+                int choice;
+                do {
+                    cout << "\n1. Display Rooms\n";
+                    cout << "2. Add Guest\n";
+                    cout << "3. Book Room\n";
+                    cout << "4. Check-In Guest\n";
+                    cout << "5. Check-Out Guest\n";
+                    cout << "6. Exit to Main Menu\n";
+                    cout << "Enter your choice: ";
+                    cin >> choice;
+
+                    switch (choice) {
+                    case 1: displayRooms(); break;
+                    case 2: addGuest(); break;
+                    case 3: bookRoom(); break;
+                    case 4: checkInGuest(); break;
+                    case 5: checkOutGuest(); break;
+                    case 6: cout << "Exiting to Main Menu...\n"; break;
+                    default: cout << "Invalid choice. Try again.\n"; break;
+                    }
+                } while (choice != 6);
+            }
+            else {
+                cout << "Invalid password.\n";
+            }
+        }
+        else if (roleChoice == 2) {
+            // Guest Login
+            string login_id;
+            cout << "Enter Guest Login ID: ";
+            cin >> login_id;
+
+            bool found = false;
+            for (int i = 0; i < guest_count; ++i) {
+                if (guest_login_ids[i] == login_id) {
+                    found = true;
+                    int choice;
+                    do {
+                        displayGuestMenu();
+                        cin >> choice;
+                        switch (choice) {
+                        case 1: displayRooms(); break;
+                        case 2:
+                            if (guest_room_bookings[i] == -1) {
+                                cout << "You have not booked any room yet.\n";
+                            }
+                            else {
+                                cout << "Your booked room is: " << guest_room_bookings[i] << "\n";
+                            }
+                            break;
+                        case 3: cout << "Exiting to Main Menu...\n"; break;
+                        default: cout << "Invalid choice. Try again.\n"; break;
+                        }
+                    } while (choice != 3);
+                    break;
+                }
+            }
+            if (!found) {
+                cout << "Invalid Login ID.\n";
+            }
+        }
+        else if (roleChoice != 3) {
+            cout << "Invalid choice. Please try again.\n";
+        }
+    } while (roleChoice != 3);
+
+    cout << "Thank you for using the Hotel Management System.\n";
+    return 0;
+}
