@@ -1,3 +1,2 @@
-.github
-.gitignore
+
 README.md
